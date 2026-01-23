@@ -14,7 +14,6 @@ pub fn execute_command(command: &[String]) -> Result<()> {
 
     let output = Command::new(program)
         .args(args)
-        .current_dir(".")
         .output()
         .map_err(|e| {
             Error::CommandExecutionFailed(format!(
