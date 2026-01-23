@@ -21,6 +21,10 @@ enum Commands {
 
 #[derive(Args)]
 struct CommandArgs {
+    /// Directory to execute test command
+    #[arg(long, required = true)]
+    dir: String,
+
     /// Feature name (default: "default")
     #[arg(long)]
     feature: Option<String>,
@@ -35,11 +39,11 @@ fn run(args: CommandArgs) -> Result<()> {
     config_helper::check_c2rust_config_exists()?;
 
     // 2. Execute the test command
-    executor::execute_command(&args.command)?;
+    executor::execute_command(&args.dir, &args.command)?;
 
     // 3. Save configuration using c2rust-config
     let command_str = args.command.join(" ");
-    config_helper::save_config(&command_str, args.feature.as_deref())?;
+    config_helper::save_config(&args.dir, &command_str, args.feature.as_deref())?;
 
     println!("Test command executed successfully and configuration saved.");
     Ok(())

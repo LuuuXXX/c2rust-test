@@ -1,8 +1,8 @@
 use crate::error::{Error, Result};
 use std::process::Command;
 
-/// Execute a command in the current directory
-pub fn execute_command(command: &[String]) -> Result<()> {
+/// Execute a command in the specified directory
+pub fn execute_command(dir: &str, command: &[String]) -> Result<()> {
     if command.is_empty() {
         return Err(Error::CommandExecutionFailed(
             "No command provided".to_string(),
@@ -14,6 +14,7 @@ pub fn execute_command(command: &[String]) -> Result<()> {
 
     let output = Command::new(program)
         .args(args)
+        .current_dir(dir)
         .output()
         .map_err(|e| {
             Error::CommandExecutionFailed(format!(
@@ -44,14 +45,14 @@ mod tests {
 
     #[test]
     fn test_execute_command_empty() {
-        let result = execute_command(&[]);
+        let result = execute_command(".", &[]);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_execute_command_basic() {
         // Test with a simple command that should succeed
-        let result = execute_command(&["echo".to_string(), "test".to_string()]);
+        let result = execute_command(".", &["echo".to_string(), "test".to_string()]);
         assert!(result.is_ok());
     }
 }

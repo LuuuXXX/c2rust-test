@@ -1,13 +1,24 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
+use std::fs;
+use tempfile::TempDir;
 
 #[test]
 fn test_test_command_basic() {
+    let temp_dir = TempDir::new().unwrap();
+    let dir_path = temp_dir.path().to_str().unwrap();
+
+    // Create a test file to test
+    let test_file = temp_dir.path().join("test.txt");
+    fs::write(&test_file, "test content").unwrap();
+
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
     
     // Note: This test will fail if c2rust-config is not installed
     // For testing purposes, we'll just test the command parsing
     cmd.arg("test")
+        .arg("--dir")
+        .arg(dir_path)
         .arg("--")
         .arg("echo")
         .arg("testing");
@@ -19,11 +30,16 @@ fn test_test_command_basic() {
 
 #[test]
 fn test_test_with_feature() {
+    let temp_dir = TempDir::new().unwrap();
+    let dir_path = temp_dir.path().to_str().unwrap();
+
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
     
     cmd.arg("test")
         .arg("--feature")
         .arg("debug")
+        .arg("--dir")
+        .arg(dir_path)
         .arg("--")
         .arg("echo")
         .arg("test");
@@ -33,10 +49,29 @@ fn test_test_with_feature() {
 }
 
 #[test]
-fn test_missing_command_argument() {
+fn test_missing_dir_argument() {
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
     
-    cmd.arg("test");
+    cmd.arg("test")
+        .arg("--")
+        .arg("echo")
+        .arg("test");
+
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("--dir"));
+}
+
+#[test]
+fn test_missing_command_argument() {
+    let temp_dir = TempDir::new().unwrap();
+    let dir_path = temp_dir.path().to_str().unwrap();
+
+    let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
+    
+    cmd.arg("test")
+        .arg("--dir")
+        .arg(dir_path);
 
     cmd.assert()
         .failure();
@@ -63,5 +98,6 @@ fn test_test_subcommand_help() {
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("Execute test command"))
+        .stdout(predicate::str::contains("--dir"))
         .stdout(predicate::str::contains("--feature"));
 }

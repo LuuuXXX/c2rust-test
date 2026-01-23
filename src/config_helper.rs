@@ -14,18 +14,18 @@ pub fn check_c2rust_config_exists() -> Result<()> {
 }
 
 /// Save test configuration using c2rust-config
-pub fn save_config(command: &str, feature: Option<&str>) -> Result<()> {
+pub fn save_config(dir: &str, command: &str, feature: Option<&str>) -> Result<()> {
     let feature_args = if let Some(f) = feature {
         vec!["--feature", f]
     } else {
         vec![]
     };
 
-    // Save test.dir configuration (current directory)
+    // Save test.dir configuration
     let mut cmd = Command::new("c2rust-config");
     cmd.args(&["config", "--make"])
         .args(&feature_args)
-        .args(&["--set", "test.dir", "."]);
+        .args(&["--set", "test.dir", dir]);
 
     let output = cmd.output().map_err(|e| {
         Error::ConfigSaveFailed(format!("Failed to execute c2rust-config: {}", e))

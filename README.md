@@ -31,11 +31,11 @@ https://github.com/LuuuXXX/c2rust-config
 ### Basic Command
 
 ```bash
-c2rust-test test -- <test-command> [args...]
+c2rust-test test --dir <directory> -- <test-command> [args...]
 ```
 
 The `test` subcommand will:
-1. Execute the specified test command in the current directory
+1. Execute the specified test command in the specified directory
 2. Save the test configuration to c2rust-config for later use
 
 ### Examples
@@ -43,19 +43,19 @@ The `test` subcommand will:
 #### Running Make Tests
 
 ```bash
-c2rust-test test -- make test
+c2rust-test test --dir /path/to/project -- make test
 ```
 
 #### Running Custom Test Script
 
 ```bash
-c2rust-test test -- ./run_tests.sh
+c2rust-test test --dir . -- ./run_tests.sh
 ```
 
 #### Running Tests with CMake
 
 ```bash
-c2rust-test test -- ctest --output-on-failure
+c2rust-test test --dir build -- ctest --output-on-failure
 ```
 
 #### Running Tests with Feature Flag
@@ -63,11 +63,12 @@ c2rust-test test -- ctest --output-on-failure
 You can specify a feature name to organize different test configurations:
 
 ```bash
-c2rust-test test --feature debug -- make test
+c2rust-test test --feature debug --dir /path/to/project -- make test
 ```
 
 ### Command Line Options
 
+- `--dir <directory>`: Directory to execute test command (required)
 - `--feature <name>`: Optional feature name for the configuration (default: "default")
 - `--`: Separator between c2rust-test options and the test command
 - `<command> [args...]`: The test command and its arguments to execute
@@ -89,9 +90,9 @@ c2rust-test test --help
 ## How It Works
 
 1. **Validation**: Checks if `c2rust-config` is installed
-2. **Execution**: Runs the specified test command in the current directory
+2. **Execution**: Runs the specified test command in the specified directory
 3. **Configuration**: Saves two configuration values:
-   - `test.dir`: Set to current directory (`.`)
+   - `test.dir`: The directory where tests are executed
    - `test`: The full test command string
 
 ## Configuration Storage
@@ -100,13 +101,13 @@ The tool uses `c2rust-config` to store test configurations. These can be retriev
 
 Example stored configuration:
 ```
-test.dir = "."
+test.dir = "/path/to/project"
 test = "make test"
 ```
 
 With a feature:
 ```
-test.dir = "." (for feature "debug")
+test.dir = "/path/to/project" (for feature "debug")
 test = "make test" (for feature "debug")
 ```
 
