@@ -1,1 +1,0 @@
-/home/runner/work/c2rust-test/c2rust-test/target/debug/c2rust-test: /home/runner/work/c2rust-test/c2rust-test/src/config_helper.rs /home/runner/work/c2rust-test/c2rust-test/src/error.rs /home/runner/work/c2rust-test/c2rust-test/src/executor.rs /home/runner/work/c2rust-test/c2rust-test/src/main.rs
