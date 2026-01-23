@@ -26,6 +26,10 @@ cargo build --release
 This tool requires `c2rust-config` to be installed. Install it from:
 https://github.com/LuuuXXX/c2rust-config
 
+### Environment Variables
+
+- `C2RUST_CONFIG`: Optional. Path to the c2rust-config binary. If not set, the tool will look for `c2rust-config` in your PATH.
+
 ## Usage
 
 ### Basic Command
@@ -64,6 +68,15 @@ You can specify a feature name to organize different test configurations:
 
 ```bash
 c2rust-test test --feature debug --dir /path/to/project -- make test
+```
+
+#### Using Custom c2rust-config Path
+
+If `c2rust-config` is not in your PATH or you want to use a specific version:
+
+```bash
+export C2RUST_CONFIG=/path/to/custom/c2rust-config
+c2rust-test test --dir /path/to/project -- make test
 ```
 
 ### Command Line Options
