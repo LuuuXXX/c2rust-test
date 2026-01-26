@@ -61,7 +61,7 @@ fn run(args: CommandArgs) -> Result<()> {
 
         if parsed_command.is_empty() {
             return Err(error::Error::MissingParameter(
-                "Command in config is empty or whitespace-only. Provide command arguments or set a non-empty test command in config".to_string(),
+                "Command in config is empty or whitespace-only. Provide command arguments or set a non-empty test in config".to_string(),
             ));
         }
 
