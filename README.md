@@ -1,167 +1,167 @@
 # c2rust-test
 
-C project test execution tool for c2rust workflow.
+c2rust 工作流的 C 项目测试执行工具。
 
-## Overview
+## 概述
 
-`c2rust-test` is a command-line tool that executes test commands for C build projects and automatically saves the configuration using `c2rust-config`. This tool is part of the c2rust workflow for managing C to Rust translations.
+`c2rust-test` 是一个命令行工具，用于执行 C 构建项目的测试命令，并使用 `c2rust-config` 自动保存配置。该工具是 c2rust 工作流的一部分，用于管理 C 到 Rust 的转换。
 
-## Installation
+## 安装
 
-### From Source
+### 从源代码安装
 
 ```bash
 cargo install --path .
 ```
 
-Or build locally:
+或本地构建：
 
 ```bash
 cargo build --release
-# Binary will be in target/release/c2rust-test
+# 二进制文件将位于 target/release/c2rust-test
 ```
 
-## Prerequisites
+## 前置条件
 
-This tool requires `c2rust-config` to be installed. Install it from:
+该工具需要安装 `c2rust-config`。请从以下地址安装：
 https://github.com/LuuuXXX/c2rust-config
 
-### Environment Variables
+### 环境变量
 
-- `C2RUST_CONFIG`: Optional. Path to the c2rust-config binary. If not set, the tool will look for `c2rust-config` in your PATH.
+- `C2RUST_CONFIG`：可选。c2rust-config 二进制文件的路径。如果未设置，工具将在您的 PATH 中查找 `c2rust-config`。
 
-## Usage
+## 使用方法
 
-### Basic Command
+### 基本命令
 
 ```bash
 c2rust-test test --dir <directory> -- <test-command> [args...]
 ```
 
-The `test` subcommand will:
-1. Execute the specified test command in the specified directory
-2. Save the test configuration to c2rust-config for later use
+`test` 子命令将：
+1. 在指定目录中执行指定的测试命令
+2. 将测试配置保存到 c2rust-config 以供后续使用
 
-### Examples
+### 示例
 
-#### Running Make Tests
+#### 运行 Make 测试
 
 ```bash
 c2rust-test test --dir /path/to/project -- make test
 ```
 
-#### Running Custom Test Script
+#### 运行自定义测试脚本
 
 ```bash
 c2rust-test test --dir . -- ./run_tests.sh
 ```
 
-#### Running Tests with CMake
+#### 使用 CMake 运行测试
 
 ```bash
 c2rust-test test --dir build -- ctest --output-on-failure
 ```
 
-#### Running Tests with Feature Flag
+#### 使用功能标志运行测试
 
-You can specify a feature name to organize different test configurations:
+您可以指定一个功能名称来组织不同的测试配置：
 
 ```bash
 c2rust-test test --feature debug --dir /path/to/project -- make test
 ```
 
-#### Using Custom c2rust-config Path
+#### 使用自定义 c2rust-config 路径
 
-If `c2rust-config` is not in your PATH or you want to use a specific version:
+如果 `c2rust-config` 不在您的 PATH 中，或者您想使用特定版本：
 
 ```bash
 export C2RUST_CONFIG=/path/to/custom/c2rust-config
 c2rust-test test --dir /path/to/project -- make test
 ```
 
-### Command Line Options
+### 命令行选项
 
-- `--dir <directory>`: Directory to execute test command (required)
-- `--feature <name>`: Optional feature name for the configuration (default: "default")
-- `--`: Separator between c2rust-test options and the test command
-- `<command> [args...]`: The test command and its arguments to execute
+- `--dir <directory>`：执行测试命令的目录（必需）
+- `--feature <name>`：配置的可选功能名称（默认："default"）
+- `--`：c2rust-test 选项与测试命令之间的分隔符
+- `<command> [args...]`：要执行的测试命令及其参数
 
-### Help
+### 帮助
 
-Get general help:
+获取一般帮助：
 
 ```bash
 c2rust-test --help
 ```
 
-Get help for the test subcommand:
+获取 test 子命令的帮助：
 
 ```bash
 c2rust-test test --help
 ```
 
-## How It Works
+## 工作原理
 
-1. **Validation**: Checks if `c2rust-config` is installed
-2. **Execution**: Runs the specified test command in the specified directory
-3. **Configuration**: Saves two configuration values:
-   - `test.dir`: The directory where tests are executed
-   - `test`: The full test command string
+1. **验证**：检查 `c2rust-config` 是否已安装
+2. **执行**：在指定目录中运行指定的测试命令
+3. **配置**：保存两个配置值：
+   - `test.dir`：执行测试的目录
+   - `test`：完整的测试命令字符串
 
-## Configuration Storage
+## 配置存储
 
-The tool uses `c2rust-config` to store test configurations. These can be retrieved later by other c2rust tools.
+该工具使用 `c2rust-config` 来存储测试配置。这些配置可以稍后由其他 c2rust 工具检索。
 
-Example stored configuration:
+存储的配置示例：
 ```
 test.dir = "/path/to/project"
 test = "make test"
 ```
 
-With a feature:
+使用功能：
 ```
-test.dir = "/path/to/project" (for feature "debug")
-test = "make test" (for feature "debug")
+test.dir = "/path/to/project" （用于功能 "debug"）
+test = "make test" （用于功能 "debug"）
 ```
 
-## Error Handling
+## 错误处理
 
-The tool will exit with an error if:
-- `c2rust-config` is not found in PATH
-- The test command fails to execute
-- The configuration cannot be saved
+工具将在以下情况下退出并报错：
+- 在 PATH 中找不到 `c2rust-config`
+- 测试命令执行失败
+- 无法保存配置
 
-## Development
+## 开发
 
-### Building
+### 构建
 
 ```bash
 cargo build
 ```
 
-### Running Tests
+### 运行测试
 
 ```bash
 cargo test
 ```
 
-Note: Some integration tests may fail if `c2rust-config` is not installed.
+注意：如果未安装 `c2rust-config`，某些集成测试可能会失败。
 
-### Running Unit Tests Only
+### 仅运行单元测试
 
 ```bash
 cargo test --lib
 ```
 
-## License
+## 许可证
 
-This project is part of the c2rust ecosystem.
+该项目是 c2rust 生态系统的一部分。
 
-## Related Projects
+## 相关项目
 
-- [c2rust-config](https://github.com/LuuuXXX/c2rust-config) - Configuration management tool
-- [c2rust-clean](https://github.com/LuuuXXX/c2rust-clean) - Build artifact cleaning tool
+- [c2rust-config](https://github.com/LuuuXXX/c2rust-config) - 配置管理工具
+- [c2rust-clean](https://github.com/LuuuXXX/c2rust-clean) - 构建产物清理工具
 
-## Contributing
+## 贡献
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+欢迎贡献！请随时提交问题或拉取请求。
