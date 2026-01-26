@@ -57,10 +57,8 @@ fn run(args: CommandArgs) -> Result<()> {
         // Parse command string into Vec<String>
         // Note: This uses simple whitespace splitting and doesn't handle quoted arguments.
         // For commands with quoted arguments, specify them directly on the CLI.
-        let parsed_command: Vec<String> = cmd_str
-            .split_whitespace()
-            .map(|s| s.to_string())
-            .collect();
+        let parsed_command: Vec<String> =
+            cmd_str.split_whitespace().map(|s| s.to_string()).collect();
 
         if parsed_command.is_empty() {
             return Err(error::Error::MissingParameter(
