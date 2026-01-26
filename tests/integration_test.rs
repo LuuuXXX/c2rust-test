@@ -13,7 +13,7 @@ fn test_test_command_basic() {
     fs::write(&test_file, "test content").unwrap();
 
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
-    
+
     // Note: This test will fail if c2rust-config is not installed
     // For testing purposes, we'll just test the command parsing
     cmd.arg("test")
@@ -34,7 +34,7 @@ fn test_test_with_feature() {
     let dir_path = temp_dir.path().to_str().unwrap();
 
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
-    
+
     cmd.arg("test")
         .arg("--feature")
         .arg("debug")
@@ -51,20 +51,15 @@ fn test_test_with_feature() {
 #[test]
 fn test_missing_dir_argument() {
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
-    
-    cmd.arg("test")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+
+    cmd.arg("test").arg("--").arg("echo").arg("test");
 
     // The test will fail either because c2rust-config is not found,
     // or because --dir is not provided and not in config
-    cmd.assert()
-        .failure()
-        .stderr(
-            predicate::str::contains("c2rust-config not found")
-                .or(predicate::str::contains("Directory not specified"))
-        );
+    cmd.assert().failure().stderr(
+        predicate::str::contains("c2rust-config not found")
+            .or(predicate::str::contains("Directory not specified")),
+    );
 }
 
 #[test]
@@ -73,25 +68,21 @@ fn test_missing_command_argument() {
     let dir_path = temp_dir.path().to_str().unwrap();
 
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
-    
-    cmd.arg("test")
-        .arg("--dir")
-        .arg(dir_path);
+
+    cmd.arg("test").arg("--dir").arg(dir_path);
 
     // The test will fail either because c2rust-config is not found,
     // or because command is not provided and not in config
-    cmd.assert()
-        .failure()
-        .stderr(
-            predicate::str::contains("c2rust-config not found")
-                .or(predicate::str::contains("Command not specified"))
-        );
+    cmd.assert().failure().stderr(
+        predicate::str::contains("c2rust-config not found")
+            .or(predicate::str::contains("Command not specified")),
+    );
 }
 
 #[test]
 fn test_help_output() {
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
-    
+
     cmd.arg("--help");
 
     cmd.assert()
@@ -103,7 +94,7 @@ fn test_help_output() {
 #[test]
 fn test_test_subcommand_help() {
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
-    
+
     cmd.arg("test").arg("--help");
 
     cmd.assert()

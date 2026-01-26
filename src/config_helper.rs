@@ -16,9 +16,7 @@ fn get_c2rust_config_path() -> String {
 /// Check if c2rust-config command exists
 pub fn check_c2rust_config_exists() -> Result<()> {
     let config_path = get_c2rust_config_path();
-    let result = Command::new(&config_path)
-        .arg("--help")
-        .output();
+    let result = Command::new(&config_path).arg("--help").output();
 
     match result {
         Ok(output) if output.status.success() => Ok(()),
@@ -41,9 +39,9 @@ pub fn save_config(dir: &str, command: &str, feature: Option<&str>) -> Result<()
         .args(&feature_args)
         .args(&["--set", "test.dir", dir]);
 
-    let output = cmd.output().map_err(|e| {
-        Error::ConfigSaveFailed(format!("Failed to execute c2rust-config: {}", e))
-    })?;
+    let output = cmd
+        .output()
+        .map_err(|e| Error::ConfigSaveFailed(format!("Failed to execute c2rust-config: {}", e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -59,9 +57,9 @@ pub fn save_config(dir: &str, command: &str, feature: Option<&str>) -> Result<()
         .args(&feature_args)
         .args(&["--set", "test.cmd", command]);
 
-    let output = cmd.output().map_err(|e| {
-        Error::ConfigSaveFailed(format!("Failed to execute c2rust-config: {}", e))
-    })?;
+    let output = cmd
+        .output()
+        .map_err(|e| Error::ConfigSaveFailed(format!("Failed to execute c2rust-config: {}", e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -75,6 +73,9 @@ pub fn save_config(dir: &str, command: &str, feature: Option<&str>) -> Result<()
 }
 
 /// Read test configuration from c2rust-config
+///
+/// Queries the 'test' key directly which returns a structured format like:
+/// { cmd = "make test", dir = "build" }
 pub fn read_config(feature: Option<&str>) -> Result<TestConfig> {
     let config_path = get_c2rust_config_path();
     let feature_args = if let Some(f) = feature {
@@ -83,62 +84,60 @@ pub fn read_config(feature: Option<&str>) -> Result<TestConfig> {
         vec![]
     };
 
-    // List all configuration using c2rust-config
+    // Query the 'test' configuration key
     let mut cmd = Command::new(&config_path);
     cmd.args(&["config", "--make"])
         .args(&feature_args)
-        .args(&["--list"]);
+        .args(&["--list", "test"]);
 
-    let output = cmd.output().map_err(|e| {
-        Error::ConfigReadFailed(format!("Failed to execute c2rust-config: {}", e))
-    })?;
-
-    if !output.status.success() {
-        // If config file doesn't exist or is empty, return empty config
-        return Ok(TestConfig::default());
+    match cmd.output() {
+        Ok(output) if output.status.success() => {
+            let value = String::from_utf8_lossy(&output.stdout);
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                parse_test_config(trimmed)
+            } else {
+                Ok(TestConfig::default())
+            }
+        }
+        Ok(_) => {
+            // Config key doesn't exist, return empty config
+            Ok(TestConfig::default())
+        }
+        Err(e) => Err(Error::ConfigReadFailed(format!(
+            "Failed to execute c2rust-config: {}",
+            e
+        ))),
     }
+}
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+/// Parse the test configuration output from c2rust-config
+/// Expected format: { cmd = "make test", dir = "build" }
+fn parse_test_config(s: &str) -> Result<TestConfig> {
     let mut config = TestConfig::default();
 
-    // Parse the output to find test.dir and test
-    for line in stdout.lines() {
-        let line = line.trim();
-        
-        // Skip lines without '='
-        if !line.contains('=') {
-            continue;
-        }
-        
-        // Extract key from the line (before '=')
-        let key = line.splitn(2, '=').next().unwrap_or_default().trim();
-        
-        // Handle both "test.dir" and test.dir formats
-        let normalized_key = key.trim_matches('"').trim_matches('\'');
-        
-        match normalized_key {
-            "test.dir" => {
-                if let Some(value) = extract_config_value(line) {
-                    config.dir = Some(value);
-                }
-            }
-            "test.cmd" => {
-                if let Some(value) = extract_config_value(line) {
-                    config.command = Some(value);
-                }
-            }
-            _ => {
-                // Help users debug near-miss configuration keys related to testing
-                if normalized_key.starts_with("test")
-                    && normalized_key != "test.cmd"
-                    && normalized_key != "test.dir"
-                {
-                    eprintln!(
-                        "c2rust-config: ignoring unrecognized configuration key '{}'; \
-                         expected 'test.cmd' or 'test.dir'",
-                        normalized_key
-                    );
-                }
+    // Remove surrounding braces: "{ ... }" -> "..."
+    let content = s
+        .trim()
+        .strip_prefix('{')
+        .unwrap_or(s.trim())
+        .strip_suffix('}')
+        .unwrap_or(s.trim())
+        .trim();
+
+    // Split by comma to get individual key-value pairs
+    for part in content.split(',') {
+        let part = part.trim();
+
+        // Split by '=' to get key and value
+        if let Some((key, value)) = part.split_once('=') {
+            let key = key.trim();
+            let value = remove_quotes(value.trim());
+
+            match key {
+                "cmd" => config.command = Some(value),
+                "dir" => config.dir = Some(value),
+                _ => {} // Ignore unknown keys
             }
         }
     }
@@ -146,78 +145,16 @@ pub fn read_config(feature: Option<&str>) -> Result<TestConfig> {
     Ok(config)
 }
 
-/// Extract value from config line like: key = "value"
-fn extract_config_value(line: &str) -> Option<String> {
-    // Find the equals sign
-    let parts: Vec<&str> = line.splitn(2, '=').collect();
-    if parts.len() != 2 {
-        return None;
-    }
-
-    // Trim whitespace from the value part after '='
-    let value = parts[1].trim();
-    if value.is_empty() {
-        // Treat lines with no value (e.g., "test.dir = ") as missing
-        return None;
-    }
-
-    let cleaned = remove_quotes(value);
-    if cleaned.is_empty() {
-        // Also treat lines whose value is only empty quotes (e.g., test.dir = "")
-        // as missing, to avoid silently accepting an effectively absent value.
-        return None;
-    }
-
-    Some(cleaned)
-}
-
-/// Handles common escape sequences within quoted strings (e.g., "echo \"hello\"").
-fn unescape_quoted(s: &str, quote: char) -> String {
-    let mut result = String::with_capacity(s.len());
-    let mut chars = s.chars().peekable();
-
-    while let Some(c) = chars.next() {
-        if c == '\\' {
-            if let Some(&next) = chars.peek() {
-                let replaced = match next {
-                    '\\' => Some('\\'),
-                    'n' => Some('\n'),
-                    'r' => Some('\r'),
-                    't' => Some('\t'),
-                    '"' if quote == '"' => Some('"'),
-                    '\'' if quote == '\'' => Some('\''),
-                    _ => None,
-                };
-
-                if let Some(rc) = replaced {
-                    result.push(rc);
-                    // consume the escaped character
-                    chars.next();
-                    continue;
-                }
-            }
-        }
-
-        result.push(c);
-    }
-
-    result
-}
-
-/// Remove surrounding quotes from a string and handle escape sequences
+/// Remove surrounding quotes from a string
+/// Note: Does not handle escaped quotes within quoted strings (e.g., "echo \"hello\"")
 fn remove_quotes(s: &str) -> String {
-    if s.len() >= 2 {
-        let first = s.chars().next().unwrap();
-        let last = s.chars().last().unwrap();
-
-        if (first == '"' && last == '"') || (first == '\'' && last == '\'') {
-            // Safe because leading/trailing quotes are ASCII single-byte characters.
-            let inner = &s[1..s.len() - 1];
-            return unescape_quoted(inner, first);
-        }
+    if (s.starts_with('"') && s.ends_with('"') && s.len() >= 2)
+        || (s.starts_with('\'') && s.ends_with('\'') && s.len() >= 2)
+    {
+        s[1..s.len() - 1].to_string()
+    } else {
+        s.to_string()
     }
-
-    s.to_string()
 }
 
 #[cfg(test)]
@@ -236,12 +173,12 @@ mod tests {
         // Test that environment variable is respected
         // Save current value
         let original = std::env::var("C2RUST_CONFIG").ok();
-        
+
         // Test with custom path
         std::env::set_var("C2RUST_CONFIG", "/custom/path/to/c2rust-config");
         let path = get_c2rust_config_path();
         assert_eq!(path, "/custom/path/to/c2rust-config");
-        
+
         // Restore original value or remove if it wasn't set
         match original {
             Some(val) => std::env::set_var("C2RUST_CONFIG", val),
@@ -254,12 +191,12 @@ mod tests {
         // Test default behavior when env var is not set
         // Save current value
         let original = std::env::var("C2RUST_CONFIG").ok();
-        
+
         // Remove env var
         std::env::remove_var("C2RUST_CONFIG");
         let path = get_c2rust_config_path();
         assert_eq!(path, "c2rust-config");
-        
+
         // Restore original value if it was set
         if let Some(val) = original {
             std::env::set_var("C2RUST_CONFIG", val);
@@ -267,84 +204,70 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_config_value() {
-        // Test with double quotes
-        assert_eq!(
-            extract_config_value("test.dir = \"build\""),
-            Some("build".to_string())
-        );
-
-        // Test with single quotes
-        assert_eq!(
-            extract_config_value("test = 'make test'"),
-            Some("make test".to_string())
-        );
-
-        // Test without quotes
-        assert_eq!(
-            extract_config_value("key = value"),
-            Some("value".to_string())
-        );
-
-        // Test with spaces
-        assert_eq!(
-            extract_config_value("  test  =  \"test\"  "),
-            Some("test".to_string())
-        );
-
-        // Test invalid format
-        assert_eq!(extract_config_value("invalid"), None);
-        
-        // Test empty value
-        assert_eq!(extract_config_value("test.dir = "), None);
-        
-        // Test empty quoted value
-        assert_eq!(extract_config_value("test.dir = \"\""), None);
-    }
-
-    #[test]
     fn test_remove_quotes() {
         // Test with double quotes
         assert_eq!(remove_quotes("\"value\""), "value");
-        
+
         // Test with single quotes
         assert_eq!(remove_quotes("'value'"), "value");
-        
+
         // Test without quotes
         assert_eq!(remove_quotes("value"), "value");
-        
+
         // Test empty string
         assert_eq!(remove_quotes(""), "");
-        
+
         // Test single quote character
         assert_eq!(remove_quotes("\""), "\"");
-        
-        // Test escaped quotes
-        assert_eq!(remove_quotes("\"echo \\\"hello\\\"\""), "echo \"hello\"");
-        
-        // Test escaped backslash
-        assert_eq!(remove_quotes("\"path\\\\to\\\\file\""), "path\\to\\file");
-        
-        // Test other escape sequences
-        assert_eq!(remove_quotes("\"line1\\nline2\""), "line1\nline2");
-        assert_eq!(remove_quotes("\"tab\\there\""), "tab\there");
     }
 
     #[test]
-    fn test_read_config_with_valid_output() {
-        // This test simulates the output from c2rust-config
-        // We can't easily test the full read_config without mocking c2rust-config
-        // but we can test the parsing logic
-        
-        // Test that extract_config_value works with typical config output
-        assert_eq!(
-            extract_config_value("\"test.dir\" = \"build\""),
-            Some("build".to_string())
-        );
-        
-        assert_eq!(
-            extract_config_value("test.cmd = \"make test\""),
-            Some("make test".to_string())
-        );
+    fn test_parse_test_config() {
+        // Test typical output format
+        let result = parse_test_config("{ cmd = \"make test\", dir = \"build\" }").unwrap();
+        assert_eq!(result.command, Some("make test".to_string()));
+        assert_eq!(result.dir, Some("build".to_string()));
+
+        // Test with single quotes
+        let result = parse_test_config("{ cmd = 'make test', dir = 'build' }").unwrap();
+        assert_eq!(result.command, Some("make test".to_string()));
+        assert_eq!(result.dir, Some("build".to_string()));
+
+        // Test without quotes
+        let result = parse_test_config("{ cmd = make, dir = build }").unwrap();
+        assert_eq!(result.command, Some("make".to_string()));
+        assert_eq!(result.dir, Some("build".to_string()));
+
+        // Test with extra whitespace
+        let result =
+            parse_test_config("{  cmd  =  \"make test\"  ,  dir  =  \"build\"  }").unwrap();
+        assert_eq!(result.command, Some("make test".to_string()));
+        assert_eq!(result.dir, Some("build".to_string()));
+
+        // Test with only cmd
+        let result = parse_test_config("{ cmd = \"make test\" }").unwrap();
+        assert_eq!(result.command, Some("make test".to_string()));
+        assert_eq!(result.dir, None);
+
+        // Test with only dir
+        let result = parse_test_config("{ dir = \"build\" }").unwrap();
+        assert_eq!(result.command, None);
+        assert_eq!(result.dir, Some("build".to_string()));
+
+        // Test empty braces
+        let result = parse_test_config("{}").unwrap();
+        assert_eq!(result.command, None);
+        assert_eq!(result.dir, None);
+
+        // Test reverse order
+        let result = parse_test_config("{ dir = \"build\", cmd = \"make test\" }").unwrap();
+        assert_eq!(result.command, Some("make test".to_string()));
+        assert_eq!(result.dir, Some("build".to_string()));
+
+        // Test value containing '=' character
+        let result =
+            parse_test_config("{ cmd = \"VAR=value make test\", dir = \"build\" }").unwrap();
+        assert_eq!(result.command, Some("VAR=value make test".to_string()));
+        assert_eq!(result.dir, Some("build".to_string()));
     }
 }
