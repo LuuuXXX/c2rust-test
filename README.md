@@ -150,7 +150,7 @@ c2rust-test test --help
    - 显示退出代码
 5. **保存配置**：将最终使用的参数保存到配置：
    - `test.dir`：执行测试的目录
-   - `test`：完整的测试命令字符串
+   - `test.cmd`：完整的测试命令字符串
 
 ## 配置存储
 
@@ -161,19 +161,19 @@ c2rust-test test --help
 存储的配置示例：
 ```toml
 test.dir = "/path/to/project"
-test = "make test"
+test.cmd = "make test"
 ```
 
 使用功能标志时：
 ```toml
 # 默认功能
 test.dir = "/path/to/project"
-test = "make test"
+test.cmd = "make test"
 
 # debug 功能
 [feature.debug]
 test.dir = "/path/to/project"
-test = "make test VERBOSE=1"
+test.cmd = "make test VERBOSE=1"
 ```
 
 ### 配置读取行为
