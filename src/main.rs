@@ -48,6 +48,9 @@ fn run(args: CommandArgs) -> Result<()> {
         )
     })?;
 
+    // NOTE: `command` is populated by clap with an empty Vec when no arguments are
+    // provided after `--` (due to `#[arg(last = true)]`). We intentionally treat
+    // an empty Vec here as "no CLI command provided" and fall back to config.
     let command = if !args.command.is_empty() {
         args.command
     } else if let Some(cmd_str) = config.command {
@@ -61,14 +64,14 @@ fn run(args: CommandArgs) -> Result<()> {
 
         if parsed_command.is_empty() {
             return Err(error::Error::MissingParameter(
-                "Command in config is empty or whitespace-only. Provide command arguments or set a non-empty test in config".to_string(),
+                "Command in config is empty or whitespace-only. Provide command arguments after '--' or set a non-empty 'test' value in the config file.".to_string(),
             ));
         }
 
         parsed_command
     } else {
         return Err(error::Error::MissingParameter(
-            "Command not specified. Provide command arguments or set test in config".to_string(),
+            "Command not specified. Provide command arguments after '--' or set 'test' (command) in config file".to_string(),
         ));
     };
 

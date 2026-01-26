@@ -111,7 +111,7 @@ pub fn read_config(feature: Option<&str>) -> Result<TestConfig> {
         }
         
         // Extract key from the line (before '=')
-        let key = line.split('=').next().unwrap_or_default().trim();
+        let key = line.splitn(2, '=').next().unwrap_or_default().trim();
         
         // Handle both "test.dir" and test.dir formats
         let normalized_key = key.trim_matches('"').trim_matches('\'');
@@ -154,19 +154,70 @@ fn extract_config_value(line: &str) -> Option<String> {
         return None;
     }
 
+    // Trim whitespace from the value part after '='
     let value = parts[1].trim();
-    Some(remove_quotes(value))
+    if value.is_empty() {
+        // Treat lines with no value (e.g., "test.dir = ") as missing
+        return None;
+    }
+
+    let cleaned = remove_quotes(value);
+    if cleaned.is_empty() {
+        // Also treat lines whose value is only empty quotes (e.g., test.dir = "")
+        // as missing, to avoid silently accepting an effectively absent value.
+        return None;
+    }
+
+    Some(cleaned)
 }
 
-/// Remove surrounding quotes from a string
-/// Note: Does not handle escaped quotes within quoted strings (e.g., "echo \"hello\"")
-fn remove_quotes(s: &str) -> String {
-    if (s.starts_with('"') && s.ends_with('"') && s.len() >= 2) 
-        || (s.starts_with('\'') && s.ends_with('\'') && s.len() >= 2) {
-        s[1..s.len()-1].to_string()
-    } else {
-        s.to_string()
+/// Handles common escape sequences within quoted strings (e.g., "echo \"hello\"").
+fn unescape_quoted(s: &str, quote: char) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            if let Some(&next) = chars.peek() {
+                let replaced = match next {
+                    '\\' => Some('\\'),
+                    'n' => Some('\n'),
+                    'r' => Some('\r'),
+                    't' => Some('\t'),
+                    '"' if quote == '"' => Some('"'),
+                    '\'' if quote == '\'' => Some('\''),
+                    _ => None,
+                };
+
+                if let Some(rc) = replaced {
+                    result.push(rc);
+                    // consume the escaped character
+                    chars.next();
+                    continue;
+                }
+            }
+        }
+
+        result.push(c);
     }
+
+    result
+}
+
+/// Remove surrounding quotes from a string and handle escape sequences
+fn remove_quotes(s: &str) -> String {
+    if s.len() >= 2 {
+        let first = s.chars().next().unwrap();
+        let last = s.chars().last().unwrap();
+
+        if (first == '"' && last == '"') || (first == '\'' && last == '\'') {
+            // Safe because leading/trailing quotes are ASCII single-byte characters.
+            let inner = &s[1..s.len() - 1];
+            return unescape_quoted(inner, first);
+        }
+    }
+
+    s.to_string()
 }
 
 #[cfg(test)]
@@ -243,6 +294,12 @@ mod tests {
 
         // Test invalid format
         assert_eq!(extract_config_value("invalid"), None);
+        
+        // Test empty value
+        assert_eq!(extract_config_value("test.dir = "), None);
+        
+        // Test empty quoted value
+        assert_eq!(extract_config_value("test.dir = \"\""), None);
     }
 
     #[test]
@@ -261,6 +318,16 @@ mod tests {
         
         // Test single quote character
         assert_eq!(remove_quotes("\""), "\"");
+        
+        // Test escaped quotes
+        assert_eq!(remove_quotes("\"echo \\\"hello\\\"\""), "echo \"hello\"");
+        
+        // Test escaped backslash
+        assert_eq!(remove_quotes("\"path\\\\to\\\\file\""), "path\\to\\file");
+        
+        // Test other escape sequences
+        assert_eq!(remove_quotes("\"line1\\nline2\""), "line1\nline2");
+        assert_eq!(remove_quotes("\"tab\\there\""), "tab\there");
     }
 
     #[test]
