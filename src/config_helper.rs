@@ -57,7 +57,7 @@ pub fn save_config(dir: &str, command: &str, feature: Option<&str>) -> Result<()
     let mut cmd = Command::new(&config_path);
     cmd.args(&["config", "--make"])
         .args(&feature_args)
-        .args(&["--set", "test", command]);
+        .args(&["--set", "test.cmd", command]);
 
     let output = cmd.output().map_err(|e| {
         Error::ConfigSaveFailed(format!("Failed to execute c2rust-config: {}", e))
@@ -122,7 +122,7 @@ pub fn read_config(feature: Option<&str>) -> Result<TestConfig> {
                     config.dir = Some(value);
                 }
             }
-            "test" => {
+            "test.cmd" => {
                 if let Some(value) = extract_config_value(line) {
                     config.command = Some(value);
                 }
@@ -130,12 +130,12 @@ pub fn read_config(feature: Option<&str>) -> Result<TestConfig> {
             _ => {
                 // Help users debug near-miss configuration keys related to testing
                 if normalized_key.starts_with("test")
-                    && normalized_key != "test"
+                    && normalized_key != "test.cmd"
                     && normalized_key != "test.dir"
                 {
                     eprintln!(
                         "c2rust-config: ignoring unrecognized configuration key '{}'; \
-                         expected 'test' or 'test.dir'",
+                         expected 'test.cmd' or 'test.dir'",
                         normalized_key
                     );
                 }
@@ -343,7 +343,7 @@ mod tests {
         );
         
         assert_eq!(
-            extract_config_value("test = \"make test\""),
+            extract_config_value("test.cmd = \"make test\""),
             Some("make test".to_string())
         );
     }

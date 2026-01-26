@@ -64,14 +64,14 @@ fn run(args: CommandArgs) -> Result<()> {
 
         if parsed_command.is_empty() {
             return Err(error::Error::MissingParameter(
-                "Command in config is empty or whitespace-only. Provide command arguments after '--' or set a non-empty 'test' value in the config file.".to_string(),
+                "Command in config is empty or whitespace-only. Provide command arguments after '--' or set a non-empty 'test.cmd' value in the config file.".to_string(),
             ));
         }
 
         parsed_command
     } else {
         return Err(error::Error::MissingParameter(
-            "Command not specified. Provide command arguments after '--' or set 'test' (command) in config file".to_string(),
+            "Command not specified. Provide command arguments after '--' or set 'test.cmd' (command) in config file".to_string(),
         ));
     };
 
