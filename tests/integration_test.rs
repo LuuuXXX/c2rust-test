@@ -14,8 +14,6 @@ fn test_test_command_basic() {
 
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
 
-    // Note: This test will fail if c2rust-config is not installed
-    // For testing purposes, we'll just test the command parsing
     cmd.arg("test")
         .arg("--dir")
         .arg(dir_path)
@@ -23,29 +21,7 @@ fn test_test_command_basic() {
         .arg("echo")
         .arg("testing");
 
-    // The command might fail because c2rust-config might not be installed
-    // but at least it should not fail on parsing
-    let _ = cmd.assert();
-}
-
-#[test]
-fn test_test_with_feature() {
-    let temp_dir = TempDir::new().unwrap();
-    let dir_path = temp_dir.path().to_str().unwrap();
-
-    let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
-
-    cmd.arg("test")
-        .arg("--feature")
-        .arg("debug")
-        .arg("--dir")
-        .arg(dir_path)
-        .arg("--")
-        .arg("echo")
-        .arg("test");
-
-    // The command might fail because c2rust-config might not be installed
-    let _ = cmd.assert();
+    cmd.assert().success();
 }
 
 #[test]
@@ -54,12 +30,10 @@ fn test_missing_dir_argument() {
 
     cmd.arg("test").arg("--").arg("echo").arg("test");
 
-    // The test will fail either because c2rust-config is not found,
-    // or because --dir is not provided and not in config
-    cmd.assert().failure().stderr(
-        predicate::str::contains("c2rust-config not found")
-            .or(predicate::str::contains("Directory not specified")),
-    );
+    // Should fail because --dir is required
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("required"));
 }
 
 #[test]
@@ -71,12 +45,10 @@ fn test_missing_command_argument() {
 
     cmd.arg("test").arg("--dir").arg(dir_path);
 
-    // The test will fail either because c2rust-config is not found,
-    // or because command is not provided and not in config
-    cmd.assert().failure().stderr(
-        predicate::str::contains("c2rust-config not found")
-            .or(predicate::str::contains("Command not specified")),
-    );
+    // Should fail because command is required
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("required"));
 }
 
 #[test]
@@ -100,6 +72,5 @@ fn test_test_subcommand_help() {
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("Execute test command"))
-        .stdout(predicate::str::contains("--dir"))
-        .stdout(predicate::str::contains("--feature"));
+        .stdout(predicate::str::contains("--dir"));
 }
