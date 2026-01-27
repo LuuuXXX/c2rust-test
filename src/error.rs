@@ -3,7 +3,6 @@ use std::fmt;
 #[derive(Debug)]
 pub enum Error {
     CommandExecutionFailed(String),
-    MissingParameter(String),
     IoError(std::io::Error),
 }
 
@@ -12,9 +11,6 @@ impl fmt::Display for Error {
         match self {
             Error::CommandExecutionFailed(msg) => {
                 write!(f, "Command execution failed: {}", msg)
-            }
-            Error::MissingParameter(msg) => {
-                write!(f, "Missing required parameter: {}", msg)
             }
             Error::IoError(err) => {
                 write!(f, "IO error: {}", err)
