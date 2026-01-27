@@ -11,7 +11,10 @@ impl Error {
     pub fn exit_code(&self) -> i32 {
         match self {
             Error::CommandExecutionFailed(_, Some(code)) => *code,
-            Error::CommandExecutionFailed(_, None) => 1,
+            // When no exit code is available (signal termination), use 128
+            // This is a common convention on Unix systems (128 + signal number)
+            // but since we don't have the signal number, we use 128
+            Error::CommandExecutionFailed(_, None) => 128,
             Error::IoError(_) => 1,
         }
     }

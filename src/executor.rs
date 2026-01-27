@@ -60,15 +60,22 @@ pub fn execute_command(dir: &str, command: &[String]) -> Result<()> {
     println!();
 
     if !status.success() {
-        return Err(Error::CommandExecutionFailed(
+        let error_msg = if let Some(code) = status.code() {
             format!(
                 "Command '{} {}' failed with exit code {}",
                 program,
                 args.join(" "),
-                status.code().unwrap_or(-1),
-            ),
-            status.code(),
-        ));
+                code,
+            )
+        } else {
+            format!(
+                "Command '{} {}' was terminated by signal",
+                program,
+                args.join(" "),
+            )
+        };
+        
+        return Err(Error::CommandExecutionFailed(error_msg, status.code()));
     }
 
     Ok(())
