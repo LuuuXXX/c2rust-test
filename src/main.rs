@@ -30,13 +30,6 @@ struct CommandArgs {
 }
 
 fn run(args: CommandArgs) -> Result<()> {
-    // Validate that command is not empty
-    if args.command.is_empty() {
-        return Err(error::Error::MissingParameter(
-            "Command not specified. Provide command arguments after '--'".to_string(),
-        ));
-    }
-
     // Execute the test command
     executor::execute_command(&args.dir, &args.command)?;
 
