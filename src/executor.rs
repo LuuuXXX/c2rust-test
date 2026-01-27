@@ -6,6 +6,7 @@ pub fn execute_command(dir: &str, command: &[String]) -> Result<()> {
     if command.is_empty() {
         return Err(Error::CommandExecutionFailed(
             "No command provided".to_string(),
+            None,
         ));
     }
 
@@ -25,22 +26,28 @@ pub fn execute_command(dir: &str, command: &[String]) -> Result<()> {
         .stderr(Stdio::inherit())
         .spawn()
         .map_err(|e| {
-            Error::CommandExecutionFailed(format!(
-                "Failed to execute command '{} {}': {}",
-                program,
-                args.join(" "),
-                e
-            ))
+            Error::CommandExecutionFailed(
+                format!(
+                    "Failed to execute command '{} {}': {}",
+                    program,
+                    args.join(" "),
+                    e
+                ),
+                None,
+            )
         })?;
 
     // Wait for the command to complete
     let status = child.wait().map_err(|e| {
-        Error::CommandExecutionFailed(format!(
-            "Failed to wait for command '{} {}': {}",
-            program,
-            args.join(" "),
-            e
-        ))
+        Error::CommandExecutionFailed(
+            format!(
+                "Failed to wait for command '{} {}': {}",
+                program,
+                args.join(" "),
+                e
+            ),
+            None,
+        )
     })?;
 
     // Print exit status
@@ -53,12 +60,22 @@ pub fn execute_command(dir: &str, command: &[String]) -> Result<()> {
     println!();
 
     if !status.success() {
-        return Err(Error::CommandExecutionFailed(format!(
-            "Command '{} {}' failed with exit code {}",
-            program,
-            args.join(" "),
-            status.code().unwrap_or(-1),
-        )));
+        let error_msg = if let Some(code) = status.code() {
+            format!(
+                "Command '{} {}' failed with exit code {}",
+                program,
+                args.join(" "),
+                code,
+            )
+        } else {
+            format!(
+                "Command '{} {}' was terminated by signal",
+                program,
+                args.join(" "),
+            )
+        };
+        
+        return Err(Error::CommandExecutionFailed(error_msg, status.code()));
     }
 
     Ok(())
