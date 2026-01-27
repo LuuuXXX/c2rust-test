@@ -21,17 +21,17 @@ enum Commands {
 #[derive(Args)]
 struct CommandArgs {
     /// Directory to execute test command (required)
-    #[arg(long, required = true)]
-    dir: String,
+    #[arg(long = "test.dir", required = true)]
+    test_dir: String,
 
-    /// Test command to execute (e.g., "make test") (required)
-    #[arg(last = true, required = true)]
-    command: Vec<String>,
+    /// Test command to execute (required, can be multiple arguments)
+    #[arg(long = "test.cmd", required = true, num_args = 1.., allow_hyphen_values = true)]
+    test_cmd: Vec<String>,
 }
 
 fn run(args: CommandArgs) -> Result<()> {
     // Execute the test command
-    executor::execute_command(&args.dir, &args.command)?;
+    executor::execute_command(&args.test_dir, &args.test_cmd)?;
 
     println!("Test command executed successfully.");
     Ok(())

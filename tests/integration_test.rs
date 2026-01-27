@@ -15,9 +15,9 @@ fn test_test_command_basic() {
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
 
     cmd.arg("test")
-        .arg("--dir")
+        .arg("--test.dir")
         .arg(dir_path)
-        .arg("--")
+        .arg("--test.cmd")
         .arg("cargo")
         .arg("--version");
 
@@ -28,9 +28,12 @@ fn test_test_command_basic() {
 fn test_missing_dir_argument() {
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
 
-    cmd.arg("test").arg("--").arg("echo").arg("test");
+    cmd.arg("test")
+        .arg("--test.cmd")
+        .arg("echo")
+        .arg("test");
 
-    // Should fail because --dir is required
+    // Should fail because --test.dir is required
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("required"));
@@ -43,7 +46,7 @@ fn test_missing_command_argument() {
 
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
 
-    cmd.arg("test").arg("--dir").arg(dir_path);
+    cmd.arg("test").arg("--test.dir").arg(dir_path);
 
     // Should fail because command is required
     cmd.assert()
@@ -72,5 +75,5 @@ fn test_test_subcommand_help() {
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("Execute test command"))
-        .stdout(predicate::str::contains("--dir"));
+        .stdout(predicate::str::contains("--test.dir"));
 }

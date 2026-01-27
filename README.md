@@ -26,8 +26,10 @@ cargo build --release
 ### 基本命令
 
 ```bash
-c2rust-test test --dir <directory> -- <test-command> [args...]
+c2rust-test test --test.dir <directory> --test.cmd <test-command> [args...]
 ```
+
+**注意**：`--test.cmd` 必须是最后一个参数，因为它会消费所有后续的参数作为测试命令及其参数。
 
 `test` 子命令将：
 1. 在指定目录中执行指定的测试命令，实时显示输出
@@ -35,34 +37,33 @@ c2rust-test test --dir <directory> -- <test-command> [args...]
 
 ### 命令行选项
 
-- `--dir <directory>`：执行测试命令的目录（必需）
-- `--`：c2rust-test 选项与测试命令之间的分隔符
-- `<command> [args...]`：要执行的测试命令及其参数（必需）
+- `--test.dir <directory>`：执行测试命令的目录（必需）
+- `--test.cmd <command> [args...]`：要执行的测试命令及其参数（必需，必须放在最后）
 
 ### 示例
 
 #### 运行 Make 测试
 
 ```bash
-c2rust-test test --dir /path/to/project -- make test
+c2rust-test test --test.dir /path/to/project --test.cmd make test
 ```
 
 #### 运行自定义测试脚本
 
 ```bash
-c2rust-test test --dir . -- ./run_tests.sh
+c2rust-test test --test.dir . --test.cmd ./run_tests.sh
 ```
 
 #### 使用 CMake 运行测试
 
 ```bash
-c2rust-test test --dir build -- ctest --output-on-failure
+c2rust-test test --test.dir build --test.cmd ctest --output-on-failure
 ```
 
 #### 带环境变量的测试
 
 ```bash
-c2rust-test test --dir /path/to/project -- env VERBOSE=1 make test
+c2rust-test test --test.dir /path/to/project --test.cmd env VERBOSE=1 make test
 ```
 
 ### 帮助
@@ -81,7 +82,7 @@ c2rust-test test --help
 
 ## 工作原理
 
-1. **验证参数**：检查必需的 `--dir` 和命令参数是否已提供
+1. **验证参数**：检查必需的 `--test.dir` 和 `--test.cmd` 参数是否已提供
 2. **执行**：在指定目录中运行指定的测试命令，实时显示输出
    - 显示执行的命令和目录
    - 实时流式传输 stdout 和 stderr
@@ -91,8 +92,8 @@ c2rust-test test --help
 ## 错误处理
 
 工具将在以下情况下退出并报错：
-- 未提供目录参数（`--dir`）
-- 未提供测试命令
+- 未提供目录参数（`--test.dir`）
+- 未提供测试命令（`--test.cmd`）
 - 测试命令执行失败
 
 ## 输出示例
