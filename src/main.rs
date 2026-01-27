@@ -30,6 +30,22 @@ struct CommandArgs {
 }
 
 fn run(args: CommandArgs) -> Result<()> {
+    // Validate that the directory exists
+    let dir_path = std::path::Path::new(&args.build_dir);
+    if !dir_path.exists() {
+        return Err(error::Error::IoError(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("Directory does not exist: {}", args.build_dir),
+        )));
+    }
+    
+    if !dir_path.is_dir() {
+        return Err(error::Error::IoError(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("Path is not a directory: {}", args.build_dir),
+        )));
+    }
+    
     // Execute the test command
     executor::execute_command(&args.test_dir, &args.test_cmd)?;
 
