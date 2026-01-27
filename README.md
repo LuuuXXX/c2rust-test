@@ -31,7 +31,7 @@ c2rust-test test --dir <directory> -- <test-command> [args...]
 
 `test` 子命令将：
 1. 在指定目录中执行指定的测试命令，实时显示输出
-2. 返回命令的退出状态
+2. 返回命令的退出状态（成功时退出码为 0，失败时返回底层命令的退出码）
 
 ### 命令行选项
 
@@ -62,7 +62,7 @@ c2rust-test test --dir build -- ctest --output-on-failure
 #### 带环境变量的测试
 
 ```bash
-c2rust-test test --dir /path/to/project -- make test VERBOSE=1
+c2rust-test test --dir /path/to/project -- env VERBOSE=1 make test
 ```
 
 ### 帮助

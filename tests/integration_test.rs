@@ -18,8 +18,8 @@ fn test_test_command_basic() {
         .arg("--dir")
         .arg(dir_path)
         .arg("--")
-        .arg("echo")
-        .arg("testing");
+        .arg("cargo")
+        .arg("--version");
 
     cmd.assert().success();
 }
