@@ -31,14 +31,8 @@ fn run(args: CommandArgs) -> Result<()> {
     let current_dir = std::env::current_dir()
         .map_err(|e| error::Error::IoError(e))?;
     
-    let test_dir = current_dir.to_str()
-        .ok_or_else(|| error::Error::IoError(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "Current directory path contains invalid UTF-8"
-        )))?;
-    
     // Execute the test command in the current directory
-    executor::execute_command(test_dir, &args.test_cmd)?;
+    executor::execute_command(&current_dir, &args.test_cmd)?;
 
     println!("Test command executed successfully.");
     Ok(())
