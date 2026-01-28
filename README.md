@@ -4,7 +4,7 @@ c2rust 工作流的 C 项目测试执行工具。
 
 ## 概述
 
-`c2rust-test` 是一个命令行工具，用于在指定目录中执行 C 构建项目的测试命令。该工具是 c2rust 工作流的一部分，用于管理 C 到 Rust 的转换。
+`c2rust-test` 是一个命令行工具，用于在当前目录中执行 C 构建项目的测试命令。该工具是 c2rust 工作流的一部分，用于管理 C 到 Rust 的转换。
 
 ## 安装
 
@@ -26,44 +26,51 @@ cargo build --release
 ### 基本命令
 
 ```bash
-c2rust-test test --test.dir <directory> --test.cmd <test-command> [args...]
+c2rust-test test -- <test-command> [args...]
 ```
 
-**注意**：`--test.cmd` 必须是最后一个参数，因为它会消费所有后续的参数作为测试命令及其参数。
+**注意**：使用 `--` 分隔符来区分 c2rust-test 的参数和测试命令的参数。
 
 `test` 子命令将：
-1. 在指定目录中执行指定的测试命令，实时显示输出
+1. 在**当前目录**中执行指定的测试命令，实时显示输出
 2. 返回命令的退出状态（成功时退出码为 0，失败时返回底层命令的退出码）
 
-### 命令行选项
+### 命令行参数
 
-- `--test.dir <directory>`：执行测试命令的目录（必需）
-- `--test.cmd <command> [args...]`：要执行的测试命令及其参数（必需，必须放在最后）
+- `--`：参数分隔符，之后的所有参数都是测试命令及其参数；**当测试命令或其参数以 `-` 开头时，必须使用该分隔符**，其他情况下也推荐始终使用
+
+注意：
+- 测试命令会在**当前目录**执行
+- 工具会自动使用当前目录作为测试执行目录
+- 使用 `--` 分隔符来区分 c2rust-test 的参数和测试命令的参数；当测试命令或其参数以 `-` 开头时，使用 `--` 可以避免与 c2rust-test 自身的参数产生歧义
 
 ### 示例
 
 #### 运行 Make 测试
 
 ```bash
-c2rust-test test --test.dir /path/to/project --test.cmd make test
+cd /path/to/project
+c2rust-test test -- make test
 ```
 
 #### 运行自定义测试脚本
 
 ```bash
-c2rust-test test --test.dir . --test.cmd ./run_tests.sh
+c2rust-test test -- ./run_tests.sh
 ```
 
 #### 使用 CMake 运行测试
 
 ```bash
-c2rust-test test --test.dir build --test.cmd ctest --output-on-failure
+cd build
+c2rust-test test -- ctest --output-on-failure
 ```
 
 #### 带环境变量的测试
 
 ```bash
-c2rust-test test --test.dir /path/to/project --test.cmd env VERBOSE=1 make test
+cd /path/to/project
+c2rust-test test -- env VERBOSE=1 make test
 ```
 
 ### 帮助
@@ -82,8 +89,8 @@ c2rust-test test --help
 
 ## 工作原理
 
-1. **验证参数**：检查必需的 `--test.dir` 和 `--test.cmd` 参数是否已提供
-2. **执行**：在指定目录中运行指定的测试命令，实时显示输出
+1. **获取当前目录**：自动使用命令执行时的当前工作目录
+2. **执行**：在当前目录中运行指定的测试命令，实时显示输出
    - 显示执行的命令和目录
    - 实时流式传输 stdout 和 stderr
    - 显示退出代码
@@ -92,8 +99,8 @@ c2rust-test test --help
 ## 错误处理
 
 工具将在以下情况下退出并报错：
-- 未提供目录参数（`--test.dir`）
-- 未提供测试命令（`--test.cmd`）
+- 无法获取当前工作目录
+- 未提供测试命令
 - 测试命令执行失败
 
 ## 输出示例
