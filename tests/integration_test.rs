@@ -1,15 +1,10 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
-use std::fs;
 use tempfile::TempDir;
 
 #[test]
 fn test_test_command_basic() {
     let temp_dir = TempDir::new().unwrap();
-
-    // Create a test file to test
-    let test_file = temp_dir.path().join("test.txt");
-    fs::write(&test_file, "test content").unwrap();
 
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
 

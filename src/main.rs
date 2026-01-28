@@ -29,16 +29,13 @@ struct CommandArgs {
 fn run(args: CommandArgs) -> Result<()> {
     // Get the current working directory (where the command is executed)
     let current_dir = std::env::current_dir()
-        .map_err(|e| error::Error::CommandExecutionFailed(
-            format!("Failed to get current directory: {}", e),
-            None
-        ))?;
+        .map_err(|e| error::Error::IoError(e))?;
     
     let test_dir = current_dir.to_str()
-        .ok_or_else(|| error::Error::CommandExecutionFailed(
-            "Current directory path contains invalid UTF-8".to_string(),
-            None
-        ))?;
+        .ok_or_else(|| error::Error::IoError(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Current directory path contains invalid UTF-8"
+        )))?;
     
     // Execute the test command in the current directory
     executor::execute_command(test_dir, &args.test_cmd)?;
