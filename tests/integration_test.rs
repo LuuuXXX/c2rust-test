@@ -24,8 +24,9 @@ case "$1" in
 esac
 "#;
     
-    let temp_dir = env::temp_dir();
-    let mock_path = temp_dir.join("mock-c2rust-config");
+    // Create a unique mock file per test invocation
+    let temp_dir = TempDir::new().unwrap();
+    let mock_path = temp_dir.path().join("c2rust-config");
     std::fs::write(&mock_path, mock_script).unwrap();
     
     // Make it executable on Unix systems
@@ -36,6 +37,10 @@ esac
         perms.set_mode(0o755);
         std::fs::set_permissions(&mock_path, perms).unwrap();
     }
+    
+    // Leak the TempDir to prevent cleanup during test execution
+    // The OS will clean up when the process exits
+    std::mem::forget(temp_dir);
     
     mock_path
 }
