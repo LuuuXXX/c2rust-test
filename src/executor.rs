@@ -85,7 +85,6 @@ pub fn execute_command(dir: &Path, command: &[String]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
 
     #[test]
     fn test_execute_command_empty() {
