@@ -20,34 +20,19 @@ enum Commands {
 
 #[derive(Args)]
 struct CommandArgs {
-    /// Directory to execute test command (required)
-    #[arg(long = "test.dir", required = true)]
-    test_dir: String,
-
-    /// Test command to execute (required, can be multiple arguments)
-    #[arg(long = "test.cmd", required = true, num_args = 1.., allow_hyphen_values = true)]
+    /// Test command to execute - use after '--' separator
+    /// Example: c2rust-test test -- make test
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true, value_name = "TEST_CMD")]
     test_cmd: Vec<String>,
 }
 
 fn run(args: CommandArgs) -> Result<()> {
-    // Validate that the directory exists
-    let dir_path = std::path::Path::new(&args.test_dir);
-    if !dir_path.exists() {
-        return Err(error::Error::IoError(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!("Directory does not exist: {}", args.test_dir),
-        )));
-    }
+    // Get the current working directory (where the command is executed)
+    let current_dir = std::env::current_dir()
+        .map_err(|e| error::Error::IoError(e))?;
     
-    if !dir_path.is_dir() {
-        return Err(error::Error::IoError(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            format!("Path is not a directory: {}", args.test_dir),
-        )));
-    }
-    
-    // Execute the test command
-    executor::execute_command(&args.test_dir, &args.test_cmd)?;
+    // Execute the test command in the current directory
+    executor::execute_command(&current_dir, &args.test_cmd)?;
 
     println!("Test command executed successfully.");
     Ok(())

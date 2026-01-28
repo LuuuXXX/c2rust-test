@@ -1,52 +1,28 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
-use std::fs;
 use tempfile::TempDir;
 
 #[test]
 fn test_test_command_basic() {
     let temp_dir = TempDir::new().unwrap();
-    let dir_path = temp_dir.path().to_str().unwrap();
-
-    // Create a test file to test
-    let test_file = temp_dir.path().join("test.txt");
-    fs::write(&test_file, "test content").unwrap();
 
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
 
-    cmd.arg("test")
-        .arg("--test.dir")
-        .arg(dir_path)
-        .arg("--test.cmd")
-        .arg("cargo")
-        .arg("--version");
+    // Set the current directory for the command to run in
+    cmd.current_dir(temp_dir.path())
+        .arg("test")
+        .arg("--")
+        .arg("echo")
+        .arg("test");
 
     cmd.assert().success();
 }
 
 #[test]
-fn test_missing_dir_argument() {
-    let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
-
-    cmd.arg("test")
-        .arg("--test.cmd")
-        .arg("echo")
-        .arg("test");
-
-    // Should fail because --test.dir is required
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("required"));
-}
-
-#[test]
 fn test_missing_command_argument() {
-    let temp_dir = TempDir::new().unwrap();
-    let dir_path = temp_dir.path().to_str().unwrap();
-
     let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
 
-    cmd.arg("test").arg("--test.dir").arg(dir_path);
+    cmd.arg("test");
 
     // Should fail because command is required
     cmd.assert()
@@ -75,5 +51,39 @@ fn test_test_subcommand_help() {
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("Execute test command"))
-        .stdout(predicate::str::contains("--test.dir"));
+        .stdout(predicate::str::contains("TEST_CMD"));
+}
+
+#[test]
+fn test_with_separator() {
+    let temp_dir = TempDir::new().unwrap();
+
+    let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
+
+    // Set the current directory for the command to run in
+    cmd.current_dir(temp_dir.path())
+        .arg("test")
+        .arg("--")
+        .arg("cargo")
+        .arg("--version");
+
+    cmd.assert().success();
+}
+
+#[test]
+fn test_command_with_hyphen() {
+    let temp_dir = TempDir::new().unwrap();
+
+    let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
+
+    // Test that we can pass arguments starting with hyphen after --
+    // Set the current directory for the command to run in
+    cmd.current_dir(temp_dir.path())
+        .arg("test")
+        .arg("--")
+        .arg("echo")
+        .arg("-n")
+        .arg("test");
+
+    cmd.assert().success();
 }
