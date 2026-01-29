@@ -1,6 +1,7 @@
 mod config_helper;
 mod error;
 mod executor;
+mod git_helper;
 
 use clap::{Args, Parser, Subcommand};
 use error::Result;
@@ -80,49 +81,33 @@ fn run(args: CommandArgs) -> Result<()> {
     config_helper::save_config(&test_dir_relative, &command_str, Some(feature), &project_root)?;
     println!("✓ Configuration saved.");
 
+    // Auto-commit changes in .c2rust directory if any
+    git_helper::auto_commit_if_modified(&project_root)?;
+
     Ok(())
 }
 
-/// Find the project root directory by searching for .c2rust directory
-/// or return the current directory as the root.
-/// 
-/// Note: On first run, if .c2rust doesn't exist, this returns the starting directory.
-/// The .c2rust directory will be created at this location during the test process.
-/// On subsequent runs, it will find the previously created .c2rust directory.
+/// Find the project root directory.
+/// First checks C2RUST_PROJECT_ROOT environment variable.
+/// If not set, searches for .c2rust directory upward from start_dir.
+/// If not found, returns the start_dir as root.
 fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
-    let mut current = start_dir.to_path_buf();
+    // Check if C2RUST_PROJECT_ROOT environment variable is set
+    // If set, it IS the project root (set by upstream tools), so use it directly
+    if let Ok(project_root) = std::env::var("C2RUST_PROJECT_ROOT") {
+        return Ok(PathBuf::from(project_root));
+    }
     
+    // If not set, search for .c2rust directory
+    let mut current = start_dir;
     loop {
         let c2rust_dir = current.join(".c2rust");
-        
-        // Use metadata() instead of exists() to detect permission/IO errors
-        match std::fs::metadata(&c2rust_dir) {
-            Ok(metadata) if metadata.is_dir() => {
-                return Ok(current);
-            }
-            Ok(_) => {
-                // .c2rust exists but is not a directory - continue searching
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                // .c2rust doesn't exist - continue searching
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
-                // Permission denied - warn and continue searching
-                eprintln!("Warning: Permission denied accessing {}, continuing search", c2rust_dir.display());
-            }
-            Err(e) => {
-                // Other IO errors - warn and continue searching
-                eprintln!("Warning: Error accessing {}: {}, continuing search", c2rust_dir.display(), e);
-            }
+        if c2rust_dir.exists() && c2rust_dir.is_dir() {
+            return Ok(current.to_path_buf());
         }
-        
-        // Try to go up one directory
         match current.parent() {
-            Some(parent) => current = parent.to_path_buf(),
-            None => {
-                // Reached filesystem root, use the starting directory
-                return Ok(start_dir.to_path_buf());
-            }
+            Some(parent) => current = parent,
+            None => return Ok(start_dir.to_path_buf()),
         }
     }
 }
