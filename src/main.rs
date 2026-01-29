@@ -94,6 +94,7 @@ fn run(args: CommandArgs) -> Result<()> {
 fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
     // Check if C2RUST_PROJECT_ROOT environment variable is set
     // If set, it IS the project root (set by upstream tools), so use it directly
+    // No validation is performed - the upstream tool is trusted to provide a valid path
     if let Ok(project_root) = std::env::var("C2RUST_PROJECT_ROOT") {
         return Ok(PathBuf::from(project_root));
     }
