@@ -102,8 +102,12 @@ fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
         let git_dir = current.join(".git");
         let c2rust_dir = current.join(".c2rust");
         
-        // Check if any project root marker exists
-        if cargo_toml.exists() || git_dir.exists() || c2rust_dir.exists() {
+        // Check if any project root marker exists with proper type checking
+        let has_cargo_toml = cargo_toml.is_file();
+        let has_git_dir = git_dir.is_dir();
+        let has_c2rust_dir = c2rust_dir.is_dir();
+        
+        if has_cargo_toml || has_git_dir || has_c2rust_dir {
             return Ok(current.to_path_buf());
         }
         
