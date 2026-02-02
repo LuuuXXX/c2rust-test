@@ -91,46 +91,29 @@ fn run(args: CommandArgs) -> Result<()> {
 }
 
 /// Find the project root directory.
-/// First checks C2RUST_PROJECT_ROOT environment variable.
-/// If not set, searches for .c2rust directory upward from start_dir.
-/// If not found, returns the start_dir as root.
+/// Searches upward from start_dir for Cargo.toml, .git, or .c2rust directory.
+/// If not found, returns the start_dir as the project root.
 fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
-    // Check if C2RUST_PROJECT_ROOT environment variable is set
-    // If set, it IS the project root (set by upstream tools), so use it directly
-    // No validation is performed - the upstream tool is trusted to provide a valid path
-    if let Ok(project_root) = std::env::var("C2RUST_PROJECT_ROOT") {
-        return Ok(PathBuf::from(project_root));
-    }
-    
-    // If not set, search for .c2rust directory
     let mut current = start_dir;
+    
     loop {
+        // Check for project root markers in order of preference
+        let cargo_toml = current.join("Cargo.toml");
+        let git_dir = current.join(".git");
         let c2rust_dir = current.join(".c2rust");
         
-        // Use metadata() instead of exists() to detect permission/IO errors
-        match std::fs::metadata(&c2rust_dir) {
-            Ok(metadata) if metadata.is_dir() => {
-                return Ok(current.to_path_buf());
-            }
-            Ok(_) => {
-                // .c2rust exists but is not a directory - continue searching
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                // .c2rust doesn't exist - continue searching
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
-                // Permission denied - warn and continue searching
-                eprintln!("Warning: Permission denied accessing {}, continuing search", c2rust_dir.display());
-            }
-            Err(e) => {
-                // Other IO errors - warn and continue searching
-                eprintln!("Warning: Error accessing {}: {}, continuing search", c2rust_dir.display(), e);
-            }
+        // Check if any project root marker exists
+        if cargo_toml.exists() || git_dir.exists() || c2rust_dir.exists() {
+            return Ok(current.to_path_buf());
         }
         
+        // Move up one directory
         match current.parent() {
             Some(parent) => current = parent,
-            None => return Ok(start_dir.to_path_buf()),
+            None => {
+                // No project marker found, use start_dir as fallback
+                return Ok(start_dir.to_path_buf());
+            }
         }
     }
 }

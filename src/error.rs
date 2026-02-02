@@ -6,6 +6,7 @@ pub enum Error {
     CommandExecutionFailed(String, Option<i32>),
     ConfigSaveFailed(String),
     IoError(std::io::Error),
+    ProjectRootNotFound(String),
 }
 
 impl Error {
@@ -20,6 +21,7 @@ impl Error {
             Error::CommandExecutionFailed(_, None) => 128,
             Error::ConfigSaveFailed(_) => 1,
             Error::IoError(_) => 1,
+            Error::ProjectRootNotFound(_) => 1,
         }
     }
 }
@@ -38,6 +40,9 @@ impl fmt::Display for Error {
             }
             Error::IoError(err) => {
                 write!(f, "IO error: {}", err)
+            }
+            Error::ProjectRootNotFound(msg) => {
+                write!(f, "{}", msg)
             }
         }
     }

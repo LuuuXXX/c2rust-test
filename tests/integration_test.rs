@@ -1,7 +1,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 use tempfile::TempDir;
-use std::env;
 
 // Helper function to create a mock c2rust-config for testing
 fn setup_mock_c2rust_config() -> std::path::PathBuf {
@@ -175,30 +174,4 @@ fn test_without_c2rust_config() {
         .stderr(predicate::str::contains("c2rust-config not found"));
 }
 
-#[test]
-fn test_c2rust_project_root_env_var() {
-    // Create a project structure with subdirectory
-    let temp_dir = TempDir::new().unwrap();
-    let project_root = temp_dir.path();
-    let subdir = project_root.join("subdir");
-    std::fs::create_dir(&subdir).unwrap();
-    
-    let mock_config = setup_mock_c2rust_config();
 
-    let mut cmd = Command::cargo_bin("c2rust-test").unwrap();
-
-    // Run from subdir but set C2RUST_PROJECT_ROOT to parent
-    cmd.current_dir(&subdir)
-        .env("C2RUST_CONFIG", mock_config)
-        .env("C2RUST_PROJECT_ROOT", project_root)
-        .arg("test")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
-
-    // Verify that the project root is the one specified by the env var
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains(format!("Project root: {}", project_root.display())))
-        .stdout(predicate::str::contains("Test directory (relative): subdir"));
-}
