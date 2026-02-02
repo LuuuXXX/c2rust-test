@@ -2,6 +2,13 @@
 name = "c2rust-test"
 version = "0.1.0"
 edition = "2021"
+authors = ["LuuuXXX"]
+description = "A command-line tool for executing C project tests in the c2rust workflow"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/LuuuXXX/c2rust-test"
+readme = "README.md"
+keywords = ["c2rust", "testing", "build-tools", "cli"]
+categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
 name = "c2rust-test"
