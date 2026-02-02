@@ -2,7 +2,7 @@
 name = "c2rust-test"
 version = "0.1.0"
 edition = "2021"
-authors = ["LuuuXXX"]
+authors = ["LuuuXXX <40876036+LuuuXXX@users.noreply.github.com>"]
 description = "A command-line tool for executing C project tests in the c2rust workflow"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/LuuuXXX/c2rust-test"

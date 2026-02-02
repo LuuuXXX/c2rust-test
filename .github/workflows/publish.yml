@@ -18,32 +18,43 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-registry-
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
       
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-index-
-      
-      - name: Cache target directory
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-target-
+      - name: Validate tag version matches Cargo.toml
+        run: |
+          # Use GITHUB_REF, which for tag pushes looks like "refs/tags/v1.2.3"
+          TAG_REF="${GITHUB_REF:-}"
+          
+          if [[ "$TAG_REF" == refs/tags/v* ]]; then
+            TAG_VERSION="${TAG_REF#refs/tags/v}"
+            
+            if [[ ! -f Cargo.toml ]]; then
+              echo "Error: Cargo.toml not found in repository root."
+              exit 1
+            fi
+            
+            CARGO_VERSION="$(grep -m1 '^version\s*=' Cargo.toml | sed -E 's/^[^"]*"([^"]*)".*/\1/')"
+            
+            if [[ -z "$CARGO_VERSION" ]]; then
+              echo "Error: Could not determine version from Cargo.toml."
+              exit 1
+            fi
+            
+            echo "Tag version:    $TAG_VERSION"
+            echo "Cargo.toml v.:  $CARGO_VERSION"
+            
+            if [[ "$TAG_VERSION" != "$CARGO_VERSION" ]]; then
+              echo "Error: Git tag version (v$TAG_VERSION) does not match Cargo.toml version ($CARGO_VERSION)."
+              exit 1
+            fi
+          else
+            echo "No version tag detected in GITHUB_REF ('$TAG_REF'); skipping tag/version validation."
+          fi
       
       - name: Run tests
         run: cargo test
       
       - name: Publish to crates.io
-        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
+        run: cargo publish --no-verify --token ${{ secrets.CRATES_IO_TOKEN }}
+
