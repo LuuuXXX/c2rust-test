@@ -97,17 +97,54 @@ fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
     let mut current = start_dir;
     
     loop {
-        // Check for project root markers in order of preference
+        // Check for any recognized project root markers in the current directory
         let cargo_toml = current.join("Cargo.toml");
-        let git_dir = current.join(".git");
+        let git_marker = current.join(".git");
         let c2rust_dir = current.join(".c2rust");
         
-        // Check if any project root marker exists with proper type checking
-        let has_cargo_toml = cargo_toml.is_file();
-        let has_git_dir = git_dir.is_dir();
-        let has_c2rust_dir = c2rust_dir.is_dir();
+        // Check Cargo.toml - should be a file
+        let has_cargo_toml = match std::fs::metadata(&cargo_toml) {
+            Ok(metadata) => metadata.is_file(),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                eprintln!("Warning: Permission denied accessing {}, continuing search", cargo_toml.display());
+                false
+            }
+            Err(e) => {
+                eprintln!("Warning: Error accessing {}: {}, continuing search", cargo_toml.display(), e);
+                false
+            }
+        };
         
-        if has_cargo_toml || has_git_dir || has_c2rust_dir {
+        // Check .git - may be either a directory (normal repo) or a file (worktree/submodule)
+        let has_git_marker = match std::fs::metadata(&git_marker) {
+            Ok(_) => true, // Exists as either file or directory
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                eprintln!("Warning: Permission denied accessing {}, continuing search", git_marker.display());
+                false
+            }
+            Err(e) => {
+                eprintln!("Warning: Error accessing {}: {}, continuing search", git_marker.display(), e);
+                false
+            }
+        };
+        
+        // Check .c2rust - should be a directory
+        let has_c2rust_dir = match std::fs::metadata(&c2rust_dir) {
+            Ok(metadata) => metadata.is_dir(),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                eprintln!("Warning: Permission denied accessing {}, continuing search", c2rust_dir.display());
+                false
+            }
+            Err(e) => {
+                eprintln!("Warning: Error accessing {}: {}, continuing search", c2rust_dir.display(), e);
+                false
+            }
+        };
+        
+        if has_cargo_toml || has_git_marker || has_c2rust_dir {
             return Ok(current.to_path_buf());
         }
         
