@@ -91,46 +91,70 @@ fn run(args: CommandArgs) -> Result<()> {
 }
 
 /// Find the project root directory.
-/// First checks C2RUST_PROJECT_ROOT environment variable.
-/// If not set, searches for .c2rust directory upward from start_dir.
-/// If not found, returns the start_dir as root.
+/// Searches upward from start_dir for Cargo.toml, .git, or .c2rust directory.
+/// If not found, returns the start_dir as the project root.
 fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
-    // Check if C2RUST_PROJECT_ROOT environment variable is set
-    // If set, it IS the project root (set by upstream tools), so use it directly
-    // No validation is performed - the upstream tool is trusted to provide a valid path
-    if let Ok(project_root) = std::env::var("C2RUST_PROJECT_ROOT") {
-        return Ok(PathBuf::from(project_root));
-    }
-    
-    // If not set, search for .c2rust directory
     let mut current = start_dir;
+    
     loop {
+        // Check for any recognized project root markers in the current directory
+        let cargo_toml = current.join("Cargo.toml");
+        let git_marker = current.join(".git");
         let c2rust_dir = current.join(".c2rust");
         
-        // Use metadata() instead of exists() to detect permission/IO errors
-        match std::fs::metadata(&c2rust_dir) {
-            Ok(metadata) if metadata.is_dir() => {
-                return Ok(current.to_path_buf());
-            }
-            Ok(_) => {
-                // .c2rust exists but is not a directory - continue searching
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                // .c2rust doesn't exist - continue searching
-            }
+        // Check Cargo.toml - should be a file
+        let has_cargo_toml = match std::fs::metadata(&cargo_toml) {
+            Ok(metadata) => metadata.is_file(),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
-                // Permission denied - warn and continue searching
-                eprintln!("Warning: Permission denied accessing {}, continuing search", c2rust_dir.display());
+                eprintln!("Warning: Permission denied accessing {}, continuing search", cargo_toml.display());
+                false
             }
             Err(e) => {
-                // Other IO errors - warn and continue searching
-                eprintln!("Warning: Error accessing {}: {}, continuing search", c2rust_dir.display(), e);
+                eprintln!("Warning: Error accessing {}: {}, continuing search", cargo_toml.display(), e);
+                false
             }
+        };
+        
+        // Check .git - may be either a directory (normal repo) or a file (worktree/submodule)
+        let has_git_marker = match std::fs::metadata(&git_marker) {
+            Ok(_) => true, // Exists as either file or directory
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                eprintln!("Warning: Permission denied accessing {}, continuing search", git_marker.display());
+                false
+            }
+            Err(e) => {
+                eprintln!("Warning: Error accessing {}: {}, continuing search", git_marker.display(), e);
+                false
+            }
+        };
+        
+        // Check .c2rust - should be a directory
+        let has_c2rust_dir = match std::fs::metadata(&c2rust_dir) {
+            Ok(metadata) => metadata.is_dir(),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                eprintln!("Warning: Permission denied accessing {}, continuing search", c2rust_dir.display());
+                false
+            }
+            Err(e) => {
+                eprintln!("Warning: Error accessing {}: {}, continuing search", c2rust_dir.display(), e);
+                false
+            }
+        };
+        
+        if has_cargo_toml || has_git_marker || has_c2rust_dir {
+            return Ok(current.to_path_buf());
         }
         
+        // Move up one directory
         match current.parent() {
             Some(parent) => current = parent,
-            None => return Ok(start_dir.to_path_buf()),
+            None => {
+                // No project marker found, use start_dir as fallback
+                return Ok(start_dir.to_path_buf());
+            }
         }
     }
 }
